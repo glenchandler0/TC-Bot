@@ -278,18 +278,26 @@ class RuleSimulator(UserSimulator):
             slot = system_action['request_slots'].keys()[0] # only one slot
             if slot in self.goal['inform_slots'].keys(): # request slot in user's constraints  #and slot not in self.state['request_slots'].keys():
                 if(self.test_bed.collect_stats_flag == True):
-                    self.test_bed.collect_stats(0)
-                #TODO: Chance to change goal here
+                    self.test_bed.collect_event_stats(0)
+                #TODO: Chance to change goal here -- check if in history slots
                 # self.event_rand_slot_change(self.goal_change_prob, slot)
 
                 self.state['inform_slots'][slot] = self.goal['inform_slots'][slot]
+
+                #TODO: Potentially go back and change an inform from an old slot -- overrides above line of code
+                self.state, self.goal = self.test_bed.event_rand_slot_change(self.test_bed.prob_list[0], self.state, self.goal)
+
+                #TODO: Added to set slot to either old or new slot - should really only be one
+                slot = list(self.state['inform_slots'].keys())[0]
+
                 self.state['diaact'] = "inform"
                 if slot in self.state['rest_slots']: self.state['rest_slots'].remove(slot)
                 if slot in self.state['request_slots'].keys(): del self.state['request_slots'][slot]
                 self.state['request_slots'].clear()
             elif slot in self.goal['request_slots'].keys() and slot not in self.state['rest_slots'] and slot in self.state['history_slots'].keys(): # the requested slot not in goal informs, the requested slot has been answered
                 if(self.test_bed.collect_stats_flag == True):
-                    self.test_bed.collect_stats(1)
+                    self.test_bed.collect_event_stats(1)
+                self.state, self.goal = self.test_bed.event_rand_slot_change(self.test_bed.prob_list[1], self.state, self.goal)
                 #TODO: Chance to change goal here
                 # self.event_rand_slot_change(self.goal_change_prob, slot)
 
@@ -299,8 +307,8 @@ class RuleSimulator(UserSimulator):
             elif slot in self.goal['request_slots'].keys() and slot in self.state['rest_slots']: # request slot in user's goal's request slots, and not answered yet
                 #TODO: Match to rule 0 from maxbren code
                 if(self.test_bed.collect_stats_flag == True):
-                    self.test_bed.collect_stats(2)
-                self.state, self.goal = self.test_bed.event_rand_slot_change(self.test_bed.goal_change_prob, self.state, self.goal)
+                    self.test_bed.collect_event_stats(2)
+                self.state, self.goal = self.test_bed.event_rand_slot_change(self.test_bed.prob_list[2], self.state, self.goal)
 
                 self.state['diaact'] = "request" # "confirm_question"
                 self.state['request_slots'][slot] = "UNK"
@@ -359,6 +367,9 @@ class RuleSimulator(UserSimulator):
                 if 'ticket' in self.state['request_slots'].keys(): del self.state['request_slots']['ticket']
 
             for slot in self.goal['inform_slots'].keys():
+                #TODO: Potential goal change here? How will DST react?
+                #Can we respond with
+
                 #  Deny, if the answers from agent can not meet the constraints of user
                 if slot not in system_action['inform_slots'].keys() or (self.goal['inform_slots'][slot].lower() != system_action['inform_slots'][slot].lower()):
                     self.state['diaact'] = "deny"

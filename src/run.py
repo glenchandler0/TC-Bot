@@ -286,7 +286,7 @@ def save_performance_records(path, agt, records):
         print e
 
 """ Run N simulation Dialogues """
-def simulation_epoch(simulation_epoch_size):
+def simulation_epoch(simulation_epoch_size, epoch):
     successes = 0
     cumulative_reward = 0
     cumulative_turns = 0
@@ -294,7 +294,7 @@ def simulation_epoch(simulation_epoch_size):
     total_episode_count = 0
 
     #TODO Initialize stats dictionary for user sim
-    user_sim.test_bed.init_stats_dict(3)
+    user_sim.test_bed.init_stats_dict(3, epoch)
 
     res = {}
     for episode in xrange(simulation_epoch_size):
@@ -319,6 +319,12 @@ def simulation_epoch(simulation_epoch_size):
     #TODO: print stats after epoch
     print(user_sim.test_bed.stats_dict)
 
+    #TODO: Collecting epoch stats and writing to file
+    user_sim.test_bed.collect_epoch_stats(res)
+    user_sim.test_bed.write_stats_row_to_file()
+    # print(user_sim.test_bed.current_row)
+    #TODO: APPEND TO FILE!!
+
     return res
 
 """ Warm_Start Simulation (by Rule Policy) """
@@ -328,7 +334,7 @@ def warm_start_simulation():
     cumulative_turns = 0
 
     #TODO Initialize stats dictionary for user sim
-    user_sim.test_bed.init_stats_dict(3)
+    # user_sim.test_bed.init_stats_dict(3)
 
     res = {}
     warm_start_run_epochs = 0
@@ -367,7 +373,7 @@ def run_episodes(count, status):
     cumulative_turns = 0
 
     #TODO Initialize stats dictionary for user sim
-    user_sim.test_bed.init_stats_dict(3)
+    user_sim.test_bed.init_stats_dict(3, -1) #Should never allow goal shifting here
 
     if agt == 9 and params['trained_model_path'] == None and warm_start == 1:
         print ('warm_start starting ...')
@@ -395,9 +401,9 @@ def run_episodes(count, status):
         print(user_sim.test_bed.stats_dict)
 
         # simulation
-        if agt == 9 and params['trained_model_path'] == None:
+        if agt == 9:# and params['trained_model_path'] == None:#TODO CHANGE BACK FOR TRAIN / TEST
             agent.predict_mode = True
-            simulation_res = simulation_epoch(simulation_epoch_size)
+            simulation_res = simulation_epoch(simulation_epoch_size, episode)
 
             performance_records['success_rate'][episode] = simulation_res['success_rate']
             performance_records['ave_turns'][episode] = simulation_res['ave_turns']
@@ -406,7 +412,7 @@ def run_episodes(count, status):
             if simulation_res['success_rate'] >= best_res['success_rate']:
                 if simulation_res['success_rate'] >= success_rate_threshold: # threshold = 0.30
                     agent.experience_replay_pool = []
-                    simulation_epoch(simulation_epoch_size)
+                    simulation_epoch(simulation_epoch_size, episode)
 
             if simulation_res['success_rate'] > best_res['success_rate']:
                 best_model['model'] = copy.deepcopy(agent)
@@ -420,7 +426,7 @@ def run_episodes(count, status):
             agent.predict_mode = False
 
             print ("Simulation success rate %s, Ave reward %s, Ave turns %s, Best success rate %s" % (performance_records['success_rate'][episode], performance_records['ave_reward'][episode], performance_records['ave_turns'][episode], best_res['success_rate']))
-            if episode % save_check_point == 0 and params['trained_model_path'] == None: # save the model every 10 episodes
+            if episode % save_check_point == 0:# and params['trained_model_path'] == None: # save the model every 10 episodes #TODO: CHANGE BACK FOR ORIGINAL trained model path rule
                 save_model(params['write_model_dir'], agt, best_res['success_rate'], best_model['model'], best_res['epoch'], episode)
                 save_performance_records(params['write_model_dir'], agt, performance_records)
 
@@ -429,7 +435,7 @@ def run_episodes(count, status):
     status['successes'] += successes
     status['count'] += count
 
-    if agt == 9 and params['trained_model_path'] == None:
+    if agt == 9:# and params['trained_model_path'] == None: #TODO: CHANGE BACK TO PREVIOUS RUNNING
         save_model(params['write_model_dir'], agt, float(successes)/count, best_model['model'], best_res['epoch'], count)
         save_performance_records(params['write_model_dir'], agt, performance_records)
 
